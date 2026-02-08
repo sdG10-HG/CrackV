@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Security Check & Prize</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #0a66c2;
+            --primary-dark: #004182;
+            --accent: #ff5722; 
+            --bg: #f3f2ef;
+            --card: #ffffff;
+            --text: #333;
+            --wrong: #c20a0a;
+            --warn: #e6b800;
+            --success: #2e7d32;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Inter', sans-serif;
+            background: var(--bg); 
+            margin: 0; 
+            padding: 20px;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh; 
+            transition: background 1s ease;
+        }
+
+        /* --- UNIFIED CARD CONTAINER --- */
+        /* This wrapper ensures Game, Bridge, and Prize all look identical in size/shape */
+        .card-container {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px; /* Fixed width for alignment */
+            min-height: 500px; /* Fixed height to prevent jumping */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+            border-top: 5px solid var(--primary);
+            transition: all 0.5s ease;
+        }
+
+        h2, h3 { color: var(--text); margin: 0 0 15px 0; text-align: center; }
+        p { color: #666; text-align: center; line-height: 1.5; margin-bottom: 20px; }
+
+        /* --- GAME SPECIFIC STYLES --- */
+        .timer-display { font-size: 1.5rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; }
+
+        .guess-history-container { 
+            width: 100%;
+            height: 150px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column-reverse; 
+            border: 1px solid #eee; 
+            border-radius: 8px; 
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+
+        .guess-row { display: flex; gap: 10px; justify-content: center; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+
+        .pin-container {
+            display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; width: 100%;
+        }
+
+        .pin { 
+            width: 45px; height: 45px; 
+            border: 2px solid #ddd; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 22px; background: #fff;
+            color: var(--text);
+        }
+
+        /* Dots */
+        .clues { display: flex; gap: 4px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #eee; }
+        .dot.green { background: var(--success); }
+        .dot.yellow { background: var(--warn); }
+
+        /* Keypad */
+        .keypad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; margin-bottom: 15px; }
+        .key { 
+            padding: 12px 0; background: #f0f2f5; 
+            border: none; border-radius: 6px; 
+            font-weight: bold; font-size: 16px; cursor: pointer; color: var(--primary);
+            transition: background 0.2s;
+        }
+        .key:hover { background: #e1e9f1; }
+        .key.disabled { opacity: 0.2; pointer-events: none; }
+
+        /* Buttons */
+        .btn-group { display: flex; gap: 10px; width: 100%; }
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 12px;
+            border-radius: 6px; font-weight: 600; cursor: pointer; flex: 1;
+            font-family: 'Inter', sans-serif; transition: 0.2s;
+        }
+        .btn:hover { background: var(--primary-dark); }
+        .btn.secondary { background: #666; }
+        .btn.tip { background: var(--warn); color: black; }
+        .btn.giveup { background: var(--wrong); }
+
+        /* --- BRIDGE (REVEAL) STYLES --- */
+        .revealed-code {
+            font-size: 3rem; font-weight: 800; color: var(--accent); 
+            letter-spacing: 8px; margin: 30px 0;
+            background: #f8f9fa; padding: 15px; border-radius: 8px; width: 100%; text-align: center;
+        }
+
+        /* --- PROPOSAL/PRIZE STYLES --- */
+        .hidden { display: none !important; }
+
+        /* Romance Mode Overrides */
+        body.romance-mode {
+            background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%);
+            font-family: 'Poppins', sans-serif;
+        }
+        body.romance-mode .card-container {
+            border-radius: 25px; 
+            border-top: none;
+            box-shadow: 0 10px 40px rgba(255, 105, 180, 0.3);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        body.romance-mode h2 { color: #d63384; font-family: 'Poppins', sans-serif; }
+        body.romance-mode .btn {
+            background-color: #ff4d6d; border-radius: 50px; padding: 15px; font-size: 1.1rem;
+        }
+        body.romance-mode .btn:hover { background-color: #d63384; }
+
+        /* Animations */
+        #video-wrapper {
+            width: 260px; height: 260px; margin: 20px auto; display: none;
+            background: #ff4d6d; padding: 5px; box-shadow: 0 0 20px rgba(255, 77, 109, 0.6);
+            border-radius: 20px; animation: popIn 1s forwards;
+        }
+        #final-video { width: 100%; height: 100%; object-fit: cover; border-radius: 15px; display: block; }
+
+        .drama-text {
+            font-size: 2.5rem; font-weight: bold; color: #000; 
+            text-align: center; animation: popFade 2s forwards;
+        }
+
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes popFade { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake-effect { animation: shake 0.4s ease-in-out; }
+        
+        .balloon { position: absolute; bottom: -100px; font-size: 3rem; animation: floatUp 5s ease-in infinite; z-index: 5; }
+        @keyframes floatUp { 0% { bottom: -100px; transform: translateX(0); } 100% { bottom: 100vh; transform: translateX(-20px); } }
+        
+        /* Helper for layout switching */
+        .section-screen { width: 100%; display: flex; flex-direction: column; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <audio id="sound-success" src="success.mp3"></audio> 
+    <audio id="sound-error" src="error.mp3"></audio>     
+    <audio id="sound-weird" src="weird.mp3"></audio>     
+    <audio id="sound-yay" src="yay.mp3"></audio>         
+    <audio id="song-proposal" src="proposal.mp3" loop></audio> 
+    <audio id="song-final" src="song.mp3"></audio>
+
+    <div class="card-container" id="main-card">
+        
+        <div id="game-section" class="section-screen">
+            <div class="timer-display">⏱️ <span id="timer">00:00</span></div>
+            <h3>Security Verification</h3>
+            <p style="margin-bottom:10px; font-size:0.9rem;">Guess the 4-digit code to proceed.</p>
+
+            <div id="guess-history" class="guess-history-container"></div>
+            
+            <div class="pin-container">
+                <div id="slot-0" class="pin"></div>
+                <div id="slot-1" class="pin"></div>
+                <div id="slot-2" class="pin"></div>
+                <div id="slot-3" class="pin"></div>
+            </div>
+
+            <div class="keypad" id="keypad"></div>
+
+            <div class="btn-group">
+                <button class="btn secondary" onclick="backspace()">⌫</button>
+                <button class="btn" onclick="submitGuess()">Enter</button>
+            </div>
+            
+            <div class="btn-group" style="margin-top:10px;">
+                <button class="btn tip" onclick="giveCodeTip()">💡 Tip</button>
+                <button class="btn secondary" onclick="initCodeGame()">Reset</button>
+            </div>
+            </div>
+
+        <div id="bridge-section" class="section-screen hidden">
+            <h1 style="color:var(--primary);">ACCESS GRANTED</h1>
+            <p>Verification successful.</p>
+            <p>Your Claim Code is:</p>
+            <div class="revealed-code" id="final-code-display">----</div>
+            <button class="btn" onclick="launchPrize()">🎁 Click to Claim Prize</button>
+        </div>
+
+        <div id="prize-section" class="section-screen hidden">
+            
+            <div id="stage-1" class="section-screen">
+                <h2>Identity Check</h2>
+                <p>Who is the applicant's partner?</p>
+                <button class="btn" style="width:100%; margin-bottom:10px;" onclick="checkName('Babe')">Babe</button>
+                <button class="btn" style="width:100%; margin-bottom:10px;" onclick="checkName('Greg')">Greg</button>
+                <button class="btn" style="width:100%;" onclick="checkName('My Love')">My Love</button>
+            </div>
+
+            <div id="stage-2" class="section-screen hidden">
+                <div id="drama-text-container"></div>
+                <button id="proceed-btn" class="btn hidden" style="margin-top:20px;" onclick="goToStage3()">Continue anyway...</button>
+            </div>
+
+            <div id="stage-3" class="section-screen hidden">
+                <h2>Processing Fee</h2>
+                <p>A mandatory fee of <strong>₦500</strong> is required.</p>
+                <div class="btn-group">
+                    <button class="btn" onclick="handlePayment(true)">Pay Now</button>
+                    <button class="btn secondary" onclick="handlePayment(false)">Decline</button>
+                </div>
+            </div>
+
+            <div id="stage-4" class="section-screen hidden">
+                <h2>Esther! 🌹</h2>
+                <p>The lady that makes me smile, my <strong>ADI</strong>...<br><br>Will you be my Valentine? 🥺💖🍫</p>
+                <div class="btn-group">
+                    <button class="btn" onclick="handleProposal(true)">YES!</button>
+                    <button class="btn secondary" onclick="handleProposal(false)">No</button>
+                </div>
+            </div>
+
+            <div id="stage-5" class="section-screen hidden">
+                <h2>Wait! ✋😂</h2>
+                <p>Send the ₦500 naira first!</p>
+                <div id="countdown" style="font-size: 4rem; color: #ff4d6d; font-weight: bold;">10</div>
+            </div>
+
+            <div id="stage-6" class="section-screen hidden">
+                <h1 style="color:#d63384;">YAYYY! 🎉</h1>
+                <div id="video-wrapper">
+                    <video id="final-video" src="video.mp4" playsinline muted></video>
+                </div>
+                <p>Thank you for being my Valentine!</p>
+                <div style="font-size: 2.5rem;">🎈🥰❤️🌹🎁</div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="balloons-container"></div>
+
+<script>
+    // --- GAME VARIABLES ---
+    let secretCode = [];
+    let currentInput = [];
+    let eliminatedDigits = [];
+    let startTime;
+    let timerInterval;
+    let gameActive = false;
+
+    // --- AUDIO HELPERS ---
+    function playSound(id) {
+        const sound = document.getElementById(id);
+        if(sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log("Audio prevented:", e));
+        }
+    }
+
+    function stopSound(id) {
+        const sound = document.getElementById(id);
+        if(sound) { sound.pause(); sound.currentTime = 0; }
+    }
+
+    // --- GAME LOGIC ---
+    function startTimer() {
+        stopTimer();
+        startTime = Date.now();
+        gameActive = true;
+        timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const s = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${m}:${s}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        gameActive = false;
+        clearInterval(timerInterval);
+    }
+
+    function initCodeGame() {
+        // Randomize Code (Hidden)
+        secretCode = Array.from({length:4}, () => Math.floor(Math.random()*10));
+        currentInput = [];
+        eliminatedDigits = [];
+        
+        // UI Reset
+        document.getElementById('guess-history').innerHTML = '';
+        document.getElementById('timer').innerText = "00:00";
+        document.getElementById('final-code-display').innerText = "----";
+        
+        // Keypad Reset
+        const kp = document.getElementById('keypad');
+        kp.innerHTML = '';
+        for(let i=0; i<=9; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'key';
+            btn.innerText = i;
+            btn.id = `key-${i}`;
+            btn.onclick = () => typeCode(i);
+            kp.appendChild(btn);
+        }
+        
+        updateCodeDisplay();
+        startTimer();
+    }
+
+    function typeCode(num) {
+        if(!gameActive || currentInput.length >= 4) return;
+        currentInput.push(num);
+        updateCodeDisplay();
+    }
+
+    function backspace() {
+        if(!gameActive) return;
+        currentInput.pop();
+        updateCodeDisplay();
+    }
+
+    function updateCodeDisplay() {
+        for(let i=0; i<4; i++) {
+            const slot = document.getElementById(`slot-${i}`);
+            slot.innerText = currentInput[i] !== undefined ? currentInput[i] : '';
+        }
+    }
+
+    function submitGuess() {
+        if(!gameActive || currentInput.length !== 4) return;
+
+        let bulls = 0; // Correct Digit, Correct Spot (Green)
+        let cows = 0;  // Correct Digit, Wrong Spot (Yellow)
+        
+        let tempSecret = [...secretCode];
+        let tempGuess = [...currentInput];
+
+        // 1. Calculate Bulls
+        for(let i=0; i<4; i++) {
+            if(tempGuess[i] === tempSecret[i]) {
+                bulls++;
+                tempSecret[i] = -1; // Mark as used
+                tempGuess[i] = -2;  // Mark as checked
+            }
+        }
+
+        // 2. Calculate Cows
+        for(let i=0; i<4; i++) {
+            if(tempGuess[i] === -2) continue; // Skip bulls
+            const idx = tempSecret.indexOf(tempGuess[i]);
+            if(idx !== -1) {
+                cows++;
+                tempSecret[idx] = -1; // Mark as used
+            }
+        }
+
+        addHistory(currentInput, bulls, cows);
+
+        if(bulls === 4) {
+            // WIN
+            stopTimer();
+            showBridge(currentInput.join(''));
+        }
+        
+        currentInput = [];
+        updateCodeDisplay();
+    }
+
+    function addHistory(guess, bulls, cows) {
+        const hist = document.getElementById('guess-history');
+        const row = document.createElement('div');
+        row.className = 'guess-row';
+        
+        // Digits
+        const nums = document.createElement('div');
+        nums.style.fontWeight = "bold"; 
+        nums.style.letterSpacing = "3px";
+        nums.innerText = guess.join('');
+        
+        // Dots
+        const clueDiv = document.createElement('div'); 
+        clueDiv.className = 'clues';
+        for(let i=0; i<bulls; i++) {
+            const d = document.createElement('div'); d.className = 'dot green'; clueDiv.appendChild(d);
+        }
+        for(let i=0; i<cows; i++) {
+            const d = document.createElement('div'); d.className = 'dot yellow'; clueDiv.appendChild(d);
+        }
+        
+        row.appendChild(nums);
+        row.appendChild(clueDiv);
+        hist.prepend(row);
+    }
+
+    function giveCodeTip() {
+        if(!gameActive) return;
+        // Find digits NOT in the code
+        const available = [0,1,2,3,4,5,6,7,8,9].filter(d => !secretCode.includes(d) && !eliminatedDigits.includes(d));
+        
+        if(available.length === 0) {
+            alert("No more digits to eliminate!");
+            return;
+        }
+        
+        const digit = available[Math.floor(Math.random() * available.length)];
+        eliminatedDigits.push(digit);
+        document.getElementById(`key-${digit}`).classList.add('disabled');
+        // Visual cue
+        alert(`Tip: The number ${digit} is NOT in the code.`);
+    }
+
+    // --- BRIDGE LOGIC ---
+    function showBridge(code) {
+        document.getElementById('game-section').classList.add('hidden');
+        document.getElementById('bridge-section').classList.remove('hidden');
+        document.getElementById('final-code-display').innerText = code;
+        playSound('sound-success');
+    }
+
+    function launchPrize() {
+        document.getElementById('bridge-section').classList.add('hidden');
+        document.getElementById('prize-section').classList.remove('hidden');
+    }
+
+    // --- PROPOSAL LOGIC ---
+    function checkName(name) {
+        if (name === 'Greg') {
+            triggerGregEffect();
+        } else {
+            playSound('sound-error');
+            const card = document.getElementById('main-card');
+            card.classList.remove('shake-effect');
+            void card.offsetWidth; 
+            card.classList.add('shake-effect');
+            alert("Identity verification failed. Invalid input. ❌");
+        }
+    }
+
+    function triggerGregEffect() {
+        playSound('sound-weird');
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100]);
+
+        document.getElementById('stage-1').classList.add('hidden');
+        document.getElementById('stage-2').classList.remove('hidden');
+        
+        const dramaContainer = document.getElementById('drama-text-container');
+        const text = document.createElement('div');
+        text.innerText = "WHO IS THAT?!";
+        text.className = 'drama-text';
+        dramaContainer.appendChild(text);
+
+        setTimeout(() => {
+            text.style.display = 'none';
+            document.getElementById('proceed-btn').classList.remove('hidden');
+        }, 2000);
+    }
+
+    function goToStage3() {
+        playSound('sound-success');
+        document.getElementById('stage-2').classList.add('hidden');
+        document.getElementById('stage-3').classList.remove('hidden');
+    }
+
+    function handlePayment(isYes) {
+        if (isYes) {
+            // SWITCH THEME
+            document.body.classList.add('romance-mode');
+            document.title = "For Esther ❤️";
+            
+            // PLAY SONG
+            const song = document.getElementById('song-proposal');
+            if(song) { song.volume = 0.5; song.play().catch(e=>console.log(e)); }
+
+            document.getElementById('stage-3').classList.add('hidden');
+            document.getElementById('stage-4').classList.remove('hidden');
+        } else {
+            playSound('sound-error');
+            alert("Payment declined. You must authorize the fee. 😤");
+        }
+    }
+
+    function handleProposal(isYes) {
+        if (isYes) {
+            stopSound('song-proposal');
+            playSound('sound-success');
+            document.getElementById('stage-4').classList.add('hidden');
+            document.getElementById('stage-5').classList.remove('hidden');
+            
+            // Prank Countdown
+            setTimeout(() => {
+                const cd = document.getElementById('countdown');
+                let t = 10;
+                const interval = setInterval(() => {
+                    t--;
+                    cd.innerText = t;
+                    if(t <= 0) {
+                        clearInterval(interval);
+                        showFinale();
+                    }
+                }, 1000);
+            }, 3000); // Small delay before countdown starts
+            
+        } else {
+            playSound('sound-error');
+            alert("System Error: Option 'No' is currently disabled by admin (Me). Pick Yes! 🥰");
+        }
+    }
+
+    function showFinale() {
+        document.getElementById('stage-5').classList.add('hidden');
+        document.getElementById('stage-6').classList.remove('hidden');
+        
+        playSound('sound-yay');
+        
+        const vid = document.getElementById('final-video');
+        document.getElementById('video-wrapper').style.display = 'block';
+        if(vid) { vid.muted = false; vid.play(); }
+
+        createBalloons();
+        
+        setTimeout(() => {
+            const finalSong = document.getElementById('song-final');
+            if(finalSong) { finalSong.volume = 0.6; finalSong.play(); }
+        }, 8000);
+    }
+
+    function createBalloons() {
+        const colors = ['🎈', '❤️', '🌹', '🥰'];
+        const container = document.getElementById('balloons-container');
+        for (let i = 0; i < 30; i++) {
+            const b = document.createElement('div');
+            b.innerText = colors[Math.floor(Math.random() * colors.length)];
+            b.className = 'balloon';
+            b.style.left = Math.random() * 90 + 'vw';
+            b.style.animationDuration = (Math.random() * 3 + 3) + 's';
+            container.appendChild(b);
+        }
+    }
+
+    // Initialize
+    initCodeGame();
+
+</script>
+</body>
+</html>
