@@ -35,15 +35,14 @@
         }
 
         /* --- UNIFIED CARD CONTAINER --- */
-        /* This wrapper ensures Game, Bridge, and Prize all look identical in size/shape */
         .card-container {
             background: var(--card);
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 400px; /* Fixed width for alignment */
-            min-height: 500px; /* Fixed height to prevent jumping */
+            max-width: 400px; 
+            min-height: 500px; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -249,7 +248,7 @@
             <div id="stage-5" class="section-screen hidden">
                 <h2>Wait! ✋😂</h2>
                 <p>Send the ₦500 naira first!</p>
-                <div id="countdown" style="font-size: 4rem; color: #ff4d6d; font-weight: bold;">10</div>
+                <div id="countdown" class="hidden" style="font-size: 4rem; color: #ff4d6d; font-weight: bold;">10</div>
             </div>
 
             <div id="stage-6" class="section-screen hidden">
@@ -513,9 +512,14 @@
             document.getElementById('stage-4').classList.add('hidden');
             document.getElementById('stage-5').classList.remove('hidden');
             
-            // Prank Countdown
+            // Prank Countdown Logic Changed Here:
+            // 1. Wait 10 seconds (10000ms)
+            // 2. Make countdown visible
+            // 3. Start counting down from 10
             setTimeout(() => {
                 const cd = document.getElementById('countdown');
+                cd.classList.remove('hidden'); // Reveal number
+                
                 let t = 10;
                 const interval = setInterval(() => {
                     t--;
@@ -525,7 +529,7 @@
                         showFinale();
                     }
                 }, 1000);
-            }, 3000); // Small delay before countdown starts
+            }, 10000); // 10 second delay
             
         } else {
             playSound('sound-error');
